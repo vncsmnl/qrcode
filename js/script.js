@@ -1,28 +1,46 @@
 const container = document.querySelector(".container");
 const qrCodeBtn = document.querySelector("#qr-form button");
 const qrCodeBtnText = document.querySelector("#qr-form button span");
-
 const qrCodeInput = document.querySelector("#qr-form input");
-
 const qrCodeImg = document.querySelector("#qr-code img");
 
-// Eventos
+// Constantes
+const QR_API_URL = "https://api.qrserver.com/v1/create-qr-code/";
+const QR_SIZE = "200x200";
 
+// Funções auxiliares
+function setButtonState(text, disabled = false) {
+  qrCodeBtnText.innerText = text;
+  qrCodeBtn.style.pointerEvents = disabled ? "none" : "auto";
+}
+
+function handleQrCodeLoad() {
+  container.classList.add("active");
+  setButtonState("QR Code criado!");
+}
+
+function handleQrCodeError() {
+  container.classList.remove("active");
+  setButtonState("Erro! Tente novamente");
+}
+
+// Eventos
 function generatorQrCode() {
   const qrCodeInputValue = qrCodeInput.value.trim();
 
   if (!qrCodeInputValue) return;
 
-  qrCodeBtnText.innerText = "Gerando...";
-  qrCodeBtn.style.pointerEvents = "none";
+  setButtonState("Gerando...", true);
 
-  qrCodeImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCodeInputValue)}`;
+  // Remove listeners anteriores para evitar memory leak
+  qrCodeImg.removeEventListener("load", handleQrCodeLoad);
+  qrCodeImg.removeEventListener("error", handleQrCodeError);
 
-  qrCodeImg.addEventListener("load", () => {
-    container.classList.add("active");
-    qrCodeBtnText.innerText = "QR Code criado!";
-    qrCodeBtn.style.pointerEvents = "auto";
-  });
+  // Adiciona novos listeners
+  qrCodeImg.addEventListener("load", handleQrCodeLoad, { once: true });
+  qrCodeImg.addEventListener("error", handleQrCodeError, { once: true });
+
+  qrCodeImg.src = `${QR_API_URL}?size=${QR_SIZE}&data=${encodeURIComponent(qrCodeInputValue)}`;
 }
 
 qrCodeBtn.addEventListener("click", () => {
