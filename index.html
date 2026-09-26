@@ -6,24 +6,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="QR-FAST - Gerador inteligente, rápido e profissional de QR Code. Crie códigos para Links, Textos, Wi-Fi e WhatsApp." />
 
-  <!-- Fonte Inter - Moderna e minimalista -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-
   <!-- Estilos CSS -->
   <link rel="stylesheet" href="./css/style.css" />
 
   <!-- Javascript -->
   <script src="./js/script.js" defer></script>
 
-  <title>QR-FAST | Gerador Inteligente de QR Code</title>
+  <title>QR-FAST | Gerador de QR Code</title>
 </head>
 
 <body>
-  <!-- Canvas para efeito do cursor -->
-  <canvas id="cursor-canvas"></canvas>
-
   <!-- Container de Toasts / Notificações -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
@@ -42,15 +34,18 @@
         <div class="logo-title-group">
           <div class="logo-title-row">
             <span class="logo-text">QR-FAST</span>
-            <span class="badge-pro">PRO</span>
           </div>
-          <p class="logo-subtitle">Gerador rápido e inteligente de QR Code</p>
+          <p class="logo-subtitle">Gerador de QR Code</p>
         </div>
       </div>
     </header>
 
     <!-- Card Principal -->
     <main class="container">
+      <div class="page-intro">
+        <h1>Crie seu QR Code</h1>
+        <p>Escolha um formato, preencha os dados e gere seu código.</p>
+      </div>
       <!-- Abas de Tipo de QR Code -->
       <nav class="type-tabs" role="tablist" aria-label="Tipos de QR Code">
         <button class="tab-btn active" role="tab" aria-selected="true" data-type="url" id="tab-url">
@@ -272,7 +267,7 @@
               <span>Criando código...</span>
             </div>
 
-            <img id="qr-image" alt="QR Code gerado" class="qr-image" style="display: none;" />
+            <img id="qr-image" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="QR Code gerado" class="qr-image" style="display: none;" />
           </div>
 
           <!-- Informações / Pré-visualização do Conteúdo Codificado -->
@@ -343,8 +338,6 @@
     </footer>
   </div>
 
-  <!-- Script do efeito do cursor -->
-  <script src="./js/cursor-effect.js"></script>
 </body>
 
 </html>
