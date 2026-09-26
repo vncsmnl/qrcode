@@ -98,6 +98,7 @@ button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visibl
 .panels-wrapper { grid-area: form; width: 100%; }
 .tab-panel { display: none; flex-direction: column; gap: 16px; }
 .tab-panel.active { display: flex; animation: panel-in .18s ease-out; }
+.logo-upload { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); }
 @keyframes panel-in { from { opacity: .5; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
 
 .input-label { display: block; margin-bottom: 8px; color: #3a3d37; font-size: 13px; font-weight: 600; }
@@ -130,21 +131,28 @@ input:focus, textarea:focus, select:focus { border-color: #78a98a; outline: none
 .phone-prefix { position: absolute; left: 14px; color: var(--muted); font-size: 13px; }
 #wa-phone { padding-left: 48px; }
 .form-grid { display: flex; flex-direction: column; gap: 16px; }
+.pix-details-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+#pix-key, #pix-name, #pix-city, #pix-amount { padding-left: 14px; }
 .input-hint { display: flex; gap: 5px; margin-top: -5px; color: var(--muted); font-size: 12px; line-height: 1.55; }
 .hint-badge { color: #454a43; font-weight: 600; }
 .input-hint code { padding: 1px 4px; border-radius: 3px; background: #eff0ec; color: #343831; font-size: 11px; }
 
-.customizer-accordion { grid-area: custom; width: 100%; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.customizer-header { display: flex; align-items: center; justify-content: space-between; min-height: 48px; list-style: none; color: #41453f; font-size: 13px; font-weight: 550; cursor: pointer; user-select: none; }
-.customizer-header::-webkit-details-marker { display: none; }
+.customizer-accordion { grid-area: custom; width: 100%; padding: 16px 0 18px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.customizer-header { display: flex; align-items: center; min-height: 28px; margin: 0 0 16px; color: #41453f; font-size: 14px; font-weight: 600; }
 .customizer-title { display: flex; align-items: center; gap: 9px; }
-.customizer-icon, .chevron-icon { width: 16px; height: 16px; color: var(--muted); }
-.chevron-icon { transition: transform .16s ease; }
-.customizer-accordion[open] .chevron-icon { transform: rotate(180deg); }
-.customizer-body { padding: 4px 0 18px; }
+.customizer-icon { width: 16px; height: 16px; color: var(--muted); }
+.chevron-icon { display: none; }
+.customizer-body { padding: 0; }
 .customizer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 24px; }
 .customizer-item.full-width { grid-column: 1 / -1; }
 .customizer-label { display: block; margin-bottom: 9px; color: var(--muted); font-size: 12px; font-weight: 600; }
+.logo-picker-row { display: flex; align-items: center; gap: 12px; }
+input[type="file"] { width: min(100%, 390px); color: #62665f; font-size: 12px; }
+input[type="file"]::file-selector-button { min-height: 34px; margin-right: 10px; padding: 0 11px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: #41453f; font: inherit; cursor: pointer; }
+input[type="file"]::file-selector-button:hover { background: var(--soft); }
+.btn-remove-logo { min-height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: #62665f; font-size: 12px; cursor: pointer; }
+.btn-remove-logo:hover { border-color: #c5c9c0; color: var(--ink); }
+.logo-status { display: block; margin-top: 8px; color: var(--muted); font-size: 11px; }
 .color-picker-row { display: flex; align-items: center; gap: 12px; }
 .native-color-picker { width: 34px; height: 34px; padding: 3px; border: 1px solid var(--line); border-radius: 7px; background: #fff; cursor: pointer; }
 .native-color-picker::-webkit-color-swatch-wrapper { padding: 0; }
@@ -226,6 +234,7 @@ input:focus, textarea:focus, select:focus { border-color: #78a98a; outline: none
   .type-tabs { gap: 13px; }
   .tab-btn { gap: 6px; font-size: 12px; }
   .customizer-grid { grid-template-columns: 1fr; gap: 16px; }
+  .pix-details-grid { grid-template-columns: 1fr; }
   .customizer-item.full-width { grid-column: auto; }
   .size-selector { flex-direction: column; }
   .size-btn { text-align: left; padding-inline: 10px; }

@@ -19,6 +19,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnToggleWifiPass = document.querySelector("#btn-toggle-wifi-pass");
   const waPhone = document.querySelector("#wa-phone");
   const waMessage = document.querySelector("#wa-message");
+  const pixKey = document.querySelector("#pix-key");
+  const pixName = document.querySelector("#pix-name");
+  const pixCity = document.querySelector("#pix-city");
+  const pixAmount = document.querySelector("#pix-amount");
+  const qrLogoPicker = document.querySelector("#qr-logo-picker");
+  const removeQrLogoBtn = document.querySelector("#btn-remove-qr-logo");
+  const qrLogoStatus = document.querySelector("#qr-logo-status");
 
   // Customizer
   const qrColorPicker = document.querySelector("#qr-color-picker");
@@ -56,9 +63,11 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentBgColor = "#ffffff";
   let lastGeneratedPayload = "";
   let lastGeneratedType = "url";
+  let lastGeneratedIsUrl = false;
   let isGenerating = false;
-
-  const QR_API_BASE = "https://api.qrserver.com/v1/create-qr-code/";
+  let qrLogoImage = null;
+  let qrLogoDataUrl = "";
+  const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
   // ===== Sistema de Toasts =====
   function showToast(message, type = "info") {
@@ -107,6 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
       else if (type === "text") textInput.focus();
       else if (type === "wifi") wifiSsid.focus();
       else if (type === "whatsapp") waPhone.focus();
+      else if (type === "pix") pixKey.focus();
     });
   });
 
@@ -222,6 +232,107 @@ document.addEventListener("DOMContentLoaded", () => {
     return str.replace(/([\\;,:"])/g, "\\$1");
   }
 
+  function emvField(id, value) {
+    const text = String(value);
+    if (text.length > 99) throw new Error("Campo Pix excede o limite do BR Code.");
+    return `${id}${String(text.length).padStart(2, "0")}${text}`;
+  }
+
+  function normalizeEmvText(value, maxLength) {
+    return value.normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^\x20-\x7E]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, maxLength);
+  }
+
+  function calculatePixCrc(payload) {
+    let crc = 0xffff;
+    for (let index = 0; index < payload.length; index++) {
+      crc ^= payload.charCodeAt(index) << 8;
+      for (let bit = 0; bit < 8; bit++) {
+        crc = crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1;
+        crc &= 0xffff;
+      }
+    }
+    return crc.toString(16).toUpperCase().padStart(4, "0");
+  }
+
+  function buildPixPayload() {
+    const key = pixKey.value.trim();
+    if (!key) {
+      showToast("Informe a chave Pix.", "error");
+      pixKey.focus();
+      return null;
+    }
+    if (key.length > 77) {
+      showToast("A chave Pix deve ter até 77 caracteres.", "error");
+      pixKey.focus();
+      return null;
+    }
+    if (!/^[\x20-\x7E]+$/.test(key)) {
+      showToast("A chave Pix deve usar apenas caracteres ASCII.", "error");
+      pixKey.focus();
+      return null;
+    }
+
+    const receiverName = normalizeEmvText(pixName.value, 25);
+    if (!receiverName) {
+      showToast("Informe o nome do recebedor.", "error");
+      pixName.focus();
+      return null;
+    }
+
+    const city = normalizeEmvText(pixCity.value, 15).toUpperCase();
+    if (!city) {
+      showToast("Informe a cidade do recebedor.", "error");
+      pixCity.focus();
+      return null;
+    }
+
+    let amount = "";
+    const amountInput = pixAmount.value.trim();
+    if (amountInput) {
+      const normalizedAmount = amountInput.replace(/\s/g, "").replace(",", ".");
+      if (!/^\d+(\.\d{1,2})?$/.test(normalizedAmount)) {
+        showToast("Informe um valor válido, como 12,50.", "error");
+        pixAmount.focus();
+        return null;
+      }
+      const numericAmount = Number(normalizedAmount);
+      if (!Number.isFinite(numericAmount) || numericAmount <= 0 || numericAmount > 99999999999.99) {
+        showToast("O valor precisa ser maior que zero.", "error");
+        pixAmount.focus();
+        return null;
+      }
+      amount = numericAmount.toFixed(2);
+    }
+
+    const merchantAccount = emvField("00", "br.gov.bcb.pix") + emvField("01", key);
+    const body = [
+      emvField("00", "01"),
+      emvField("26", merchantAccount),
+      emvField("52", "0000"),
+      emvField("53", "986"),
+      amount ? emvField("54", amount) : "",
+      emvField("58", "BR"),
+      emvField("59", receiverName),
+      emvField("60", city),
+      emvField("62", emvField("05", "***")),
+      "6304",
+    ].join("");
+
+    return {
+      type: "Pix",
+      displayType: "Pix estático",
+      displayText: `Chave Pix: ${key}`,
+      rawInput: key,
+      payload: body + calculatePixCrc(body),
+      isUrl: false,
+    };
+  }
+
   /**
    * Obtém os dados formatados conforme a aba ativa
    */
@@ -317,22 +428,111 @@ document.addEventListener("DOMContentLoaded", () => {
       };
     }
 
+    if (currentTab === "pix") return buildPixPayload();
+
     return null;
   }
 
-  /**
-   * Constrói a URL para a API do QR Code
-   */
-  function buildQrApiUrl(payload, size, format = "png") {
-    const cleanColor = currentQrColor.replace("#", "");
-    const cleanBgColor = currentBgColor.replace("#", "");
-    const encodedData = encodeURIComponent(payload);
+  function drawLogoOnCanvas(canvas) {
+    if (!qrLogoImage) return;
 
-    return `${QR_API_BASE}?data=${encodedData}&size=${size}x${size}&color=${cleanColor}&bgcolor=${cleanBgColor}&format=${format}&qzone=1&margin=1&ecc=H`;
+    const context = canvas.getContext("2d");
+    const logoMaxSize = canvas.width * 0.18;
+    const scale = Math.min(logoMaxSize / qrLogoImage.naturalWidth, logoMaxSize / qrLogoImage.naturalHeight);
+    const logoWidth = qrLogoImage.naturalWidth * scale;
+    const logoHeight = qrLogoImage.naturalHeight * scale;
+
+    // Sem uma placa opaca, os pixels transparentes da imagem preservam a transparência.
+    context.drawImage(
+      qrLogoImage,
+      (canvas.width - logoWidth) / 2,
+      (canvas.height - logoHeight) / 2,
+      logoWidth,
+      logoHeight,
+    );
   }
 
+  function embedLogoInSvg(svg) {
+    if (!qrLogoDataUrl) return svg;
+    const viewBox = svg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
+    if (!viewBox) throw new Error("Não foi possível preparar o QR Code em SVG.");
+
+    const width = Number(viewBox[1]);
+    const height = Number(viewBox[2]);
+    const logo = Math.min(width, height) * 0.18;
+    const logoX = (width - logo) / 2;
+    const logoY = (height - logo) / 2;
+    const overlay = `<image x="${logoX}" y="${logoY}" width="${logo}" height="${logo}" href="${qrLogoDataUrl}" preserveAspectRatio="xMidYMid meet"/>`;
+    return svg.replace("</svg>", `${overlay}</svg>`);
+  }
+
+  async function buildQrOutput(payload, size, format = "png") {
+    const options = {
+      errorCorrectionLevel: "H",
+      margin: 2,
+      width: size,
+      color: { dark: currentQrColor, light: currentBgColor },
+    };
+
+    if (format === "svg") {
+      const svg = await QRCode.toString(payload, options);
+      return embedLogoInSvg(svg);
+    }
+
+    const canvas = await QRCode.toCanvas(payload, options);
+    drawLogoOnCanvas(canvas);
+    return canvas.toDataURL("image/png");
+  }
+
+  function dataUrlToBlob(dataUrl) {
+    const [metadata, encoded] = dataUrl.split(",");
+    const bytes = atob(encoded);
+    const buffer = new Uint8Array(bytes.length);
+    for (let index = 0; index < bytes.length; index++) buffer[index] = bytes.charCodeAt(index);
+    const mimeType = metadata.match(/data:([^;]+)/)?.[1] || "application/octet-stream";
+    return new Blob([buffer], { type: mimeType });
+  }
+
+  function setLogo(file) {
+    if (!file) return;
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      showToast("Use uma imagem PNG, JPG ou WebP.", "error");
+      qrLogoPicker.value = "";
+      return;
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+      showToast("A imagem deve ter até 2 MB.", "error");
+      qrLogoPicker.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => showToast("Não foi possível abrir essa imagem.", "error");
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => showToast("Esse arquivo não é uma imagem válida.", "error");
+      image.onload = () => {
+        qrLogoImage = image;
+        qrLogoDataUrl = String(reader.result);
+        qrLogoStatus.textContent = `${file.name} · somente nesta sessão`;
+        removeQrLogoBtn.hidden = false;
+      };
+      image.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  qrLogoPicker.addEventListener("change", () => setLogo(qrLogoPicker.files[0]));
+  removeQrLogoBtn.addEventListener("click", () => {
+    qrLogoImage = null;
+    qrLogoDataUrl = "";
+    qrLogoPicker.value = "";
+    qrLogoStatus.textContent = "Arquivo processado apenas nesta sessão.";
+    removeQrLogoBtn.hidden = true;
+  });
+
   // ===== Geração do QR Code =====
-  function generateQrCode() {
+  async function generateQrCode() {
     if (isGenerating) return;
 
     const data = getPayloadForActiveTab();
@@ -348,60 +548,49 @@ document.addEventListener("DOMContentLoaded", () => {
     qrLoadingSpinner.style.display = "flex";
     qrFrame.style.backgroundColor = currentBgColor;
 
-    const previewUrl = buildQrApiUrl(data.payload, 400, "png");
+    try {
+      const previewUrl = await buildQrOutput(data.payload, 400);
+      qrImage.src = previewUrl;
+      if (typeof qrImage.decode === "function") await qrImage.decode();
 
-    // Limpa listeners antigos
-    qrImage.onload = null;
-    qrImage.onerror = null;
-
-    qrImage.onload = () => {
       isGenerating = false;
       generateBtn.disabled = false;
       generateBtnText.textContent = "Gerar QR Code";
 
       qrLoadingSpinner.style.display = "none";
       qrImage.style.display = "block";
-
-      // Atualiza informações de preview
       lastGeneratedPayload = data.payload;
       lastGeneratedType = data.type;
+      lastGeneratedIsUrl = data.isUrl;
 
       qrInfo.style.display = "flex";
       qrInfoType.textContent = data.displayType;
-      qrInfoText.textContent = data.payload;
-      qrInfoText.title = data.payload;
+      qrInfoText.textContent = data.displayText || data.payload;
+      qrInfoText.title = data.displayText || data.payload;
 
-      // Botão de testar link (apenas para URLs e WhatsApp)
       if (data.isUrl) {
         btnTestLink.style.display = "inline-flex";
         btnTestLink.href = data.payload;
       } else {
         btnTestLink.style.display = "none";
       }
-
-      // Exibe grid de botões de download e compartilhamento
       actionsGrid.style.display = "grid";
-
       showToast("QR Code gerado com sucesso!", "success");
-    };
-
-    qrImage.onerror = () => {
+    } catch (error) {
+      console.error(error);
       isGenerating = false;
       generateBtn.disabled = false;
       generateBtnText.textContent = "Tentar novamente";
-
       qrLoadingSpinner.style.display = "none";
       qrPlaceholder.style.display = "flex";
-      showToast("Erro ao gerar QR Code. Verifique sua conexão.", "error");
-    };
-
-    qrImage.src = previewUrl;
+      showToast("Não foi possível gerar o QR Code.", "error");
+    }
   }
 
   generateBtn.addEventListener("click", generateQrCode);
 
   // Gatilho com a tecla Enter nos inputs
-  [urlInput, textInput, wifiSsid, wifiPass, waPhone, waMessage].forEach((input) => {
+  [urlInput, textInput, wifiSsid, wifiPass, waPhone, waMessage, pixKey, pixName, pixCity, pixAmount].forEach((input) => {
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
@@ -410,7 +599,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // ===== Ações de Download (Blob nativo sem problemas de CORS) =====
+  // ===== Ações de Download =====
   async function downloadQrFile(format = "png") {
     if (!lastGeneratedPayload) {
       showToast("Gere um QR Code antes de baixar.", "error");
@@ -419,12 +608,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       showToast(`Baixando QR Code (${currentSize}px .${format.toUpperCase()})...`, "info");
-      const downloadUrl = buildQrApiUrl(lastGeneratedPayload, currentSize, format);
-
-      const res = await fetch(downloadUrl);
-      if (!res.ok) throw new Error("Falha no servidor ao baixar imagem");
-
-      const blob = await res.blob();
+      const output = await buildQrOutput(lastGeneratedPayload, currentSize, format);
+      const blob = format === "svg"
+        ? new Blob([output], { type: "image/svg+xml;charset=utf-8" })
+        : dataUrlToBlob(output);
       const objectUrl = URL.createObjectURL(blob);
 
       const link = document.createElement("a");
@@ -435,7 +622,7 @@ document.addEventListener("DOMContentLoaded", () => {
       link.click();
       document.body.removeChild(link);
 
-      URL.revokeObjectURL(objectUrl);
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
       showToast(`Download de .${format.toUpperCase()} concluído!`, "success");
     } catch (err) {
       console.error(err);
@@ -455,9 +642,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       showToast("Copiando imagem...", "info");
-      const pngUrl = buildQrApiUrl(lastGeneratedPayload, currentSize, "png");
-      const res = await fetch(pngUrl);
-      const blob = await res.blob();
+      const pngUrl = await buildQrOutput(lastGeneratedPayload, currentSize, "png");
+      const blob = dataUrlToBlob(pngUrl);
 
       if (navigator.clipboard && window.ClipboardItem) {
         await navigator.clipboard.write([
@@ -466,8 +652,12 @@ document.addEventListener("DOMContentLoaded", () => {
         showToast("Imagem copiada para a área de transferência!", "success");
       } else {
         // Fallback para cópia do conteúdo em texto
-        await navigator.clipboard.writeText(lastGeneratedPayload);
-        showToast("Conteúdo copiado como texto!", "info");
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(lastGeneratedPayload);
+          showToast("Conteúdo copiado como texto!", "info");
+        } else {
+          showToast("A cópia não está disponível neste navegador.", "error");
+        }
       }
     } catch (err) {
       console.error(err);
@@ -483,9 +673,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const pngUrl = buildQrApiUrl(lastGeneratedPayload, 600, "png");
-      const res = await fetch(pngUrl);
-      const blob = await res.blob();
+      const pngUrl = await buildQrOutput(lastGeneratedPayload, 600, "png");
+      const blob = dataUrlToBlob(pngUrl);
       const file = new File([blob], "qr-code.png", { type: "image/png" });
 
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -495,11 +684,14 @@ document.addEventListener("DOMContentLoaded", () => {
           files: [file],
         });
       } else if (navigator.share) {
-        await navigator.share({
+        const shareData = {
           title: "QR Code - QR-FAST",
-          text: "Confira este QR Code gerado pelo QR-FAST",
-          url: lastGeneratedPayload,
-        });
+          text: lastGeneratedType === "Pix"
+            ? `Pix Copia e Cola:\n${lastGeneratedPayload}`
+            : `QR Code para: ${lastGeneratedPayload}`,
+        };
+        if (lastGeneratedIsUrl) shareData.url = lastGeneratedPayload;
+        await navigator.share(shareData);
       } else {
         // Se Web Share não estiver disponível, copia a imagem
         btnCopyImg.click();

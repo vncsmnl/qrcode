@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="./css/style.css" />
 
   <!-- Javascript -->
+  <script src="./js/qrcode.js" defer></script>
   <script src="./js/script.js" defer></script>
 
   <title>QR-FAST | Gerador de QR Code</title>
@@ -74,6 +75,13 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a.75.75 0 0 1-.974-.94 5.969 5.969 0 0 1 1.185-2.02A8.136 8.136 0 0 1 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
           </svg>
           <span>WhatsApp</span>
+        </button>
+
+        <button class="tab-btn" role="tab" aria-selected="false" data-type="pix" id="tab-pix">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="tab-icon" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m12 3 4 4-4 4-4-4 4-4Zm0 10 4 4-4 4-4-4 4-4ZM7 8l4 4-4 4-4-4 4-4Zm10 0 4 4-4 4-4-4 4-4Z" />
+          </svg>
+          <span>Pix</span>
         </button>
       </nav>
 
@@ -180,21 +188,53 @@
             <span>Abre o WhatsApp no celular com a conversa iniciada e mensagem pronta.</span>
           </div>
         </div>
+
+        <div class="tab-panel" id="panel-pix" role="tabpanel" aria-labelledby="tab-pix">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="input-label" for="pix-key">Chave Pix</label>
+              <input type="text" id="pix-key" placeholder="CPF, e-mail, telefone ou chave aleatória" autocomplete="off" maxlength="77" />
+            </div>
+            <div class="form-group">
+              <label class="input-label" for="pix-name">Nome do recebedor</label>
+              <input type="text" id="pix-name" placeholder="Como aparece na conta Pix" autocomplete="name" maxlength="25" />
+            </div>
+            <div class="form-grid pix-details-grid">
+              <div class="form-group">
+                <label class="input-label" for="pix-city">Cidade</label>
+                <input type="text" id="pix-city" placeholder="Sua cidade" autocomplete="address-level2" maxlength="15" />
+              </div>
+              <div class="form-group">
+                <label class="input-label" for="pix-amount">Valor (opcional)</label>
+                <input type="text" id="pix-amount" inputmode="decimal" placeholder="0,00" autocomplete="off" />
+              </div>
+            </div>
+          </div>
+          <p class="input-hint">QR estático. O nome do recebedor exibido pelo banco vem da chave Pix.</p>
+        </div>
+
+        <div class="logo-upload">
+          <label class="customizer-label" for="qr-logo-picker">Logo no centro do QR (opcional)</label>
+          <div class="logo-picker-row">
+            <input type="file" id="qr-logo-picker" accept="image/png,image/jpeg,image/webp" />
+            <button type="button" id="btn-remove-qr-logo" class="btn-remove-logo" hidden>Remover</button>
+          </div>
+          <span id="qr-logo-status" class="logo-status">PNG, JPG ou WebP · até 2 MB · fica só nesta sessão</span>
+        </div>
       </div>
 
-      <!-- Acordeão de Personalização (Cores & Resolução) -->
-      <details class="customizer-accordion" id="customizer-drawer">
-        <summary class="customizer-header">
+      <section class="customizer-accordion" id="customizer-drawer" aria-labelledby="customizer-heading">
+        <h2 class="customizer-header" id="customizer-heading">
           <div class="customizer-title">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="customizer-icon">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42" />
             </svg>
-            <span>Personalizar Estilo (Cores & Resolução)</span>
+            <span>Personalizar QR</span>
           </div>
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="chevron-icon">
             <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
           </svg>
-        </summary>
+        </h2>
 
         <div class="customizer-body">
           <div class="customizer-grid">
@@ -238,7 +278,7 @@
             </div>
           </div>
         </div>
-      </details>
+      </section>
 
       <!-- Botão Gerador Principal -->
       <button id="generate-btn" class="btn-generate">
